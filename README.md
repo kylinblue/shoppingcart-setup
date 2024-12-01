@@ -1,38 +1,46 @@
-# Setting Up a Laravel Shopping Cart Environment on Windows
+# Setting Up a Laravel Shopping Cart Environment on Apple Silicon Mac
 
 ## Prerequisites Installation
 
-1. Install PHP 8.2+:
-   ```powershell
-   # Download PHP from windows.php.net
-   # Extract to C:\php
-   # Add C:\php to Windows PATH environment variable
+1. Install Homebrew:
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    
-   # Enable PHP extensions in php.ini (rename php.ini-development):
-   # extension=pdo_pgsql
-   # extension=pgsql
-   # extension=curl
-   # extension=fileinfo
-   # extension=mbstring
-   # extension=openssl
+   # Add Homebrew to PATH for Apple Silicon
+   echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zshrc
+   source ~/.zshrc
    ```
 
-2. Install Composer:
-   ```powershell
-   # Download and run Composer-Setup.exe from https://getcomposer.org/download/
+2. Install PHP and extensions:
+   ```bash
+   brew install php@8.2
+   
+   # Install PHP extensions
+   brew install postgresql
+   
+   # Link PHP
+   brew link php@8.2
    ```
 
-3. Install PostgreSQL:
-   ```powershell
-   # Download and install PostgreSQL from https://www.postgresql.org/download/windows/
-   # Remember to note down your superuser password during installation
+3. Install Composer:
+   ```bash
+   brew install composer
+   ```
+
+4. Install PostgreSQL:
+   ```bash
+   brew install postgresql@14
+   
+   # Start PostgreSQL service
+   brew services start postgresql@14
    ```
 
 ## PostgreSQL Setup
 
-1. Create database and user (using pgAdmin or psql):
-   ```sql
-   -- Open pgAdmin or psql command prompt
+1. Create database and user:
+   ```bash
+   psql postgres
+   
    CREATE DATABASE laravel_cart;
    CREATE USER cart_user WITH ENCRYPTED PASSWORD 'your_password';
    GRANT ALL PRIVILEGES ON DATABASE laravel_cart TO cart_user;
@@ -41,7 +49,7 @@
 ## Laravel Project Setup
 
 1. Create new Laravel project:
-   ```powershell
+   ```bash
    composer create-project laravel/laravel shopping-cart
    cd shopping-cart
    ```
@@ -57,7 +65,7 @@
    ```
 
 3. Install additional packages:
-   ```powershell
+   ```bash
    composer require laravel/sanctum    # For API authentication
    composer require darryldecode/cart  # Shopping cart package
    ```
@@ -65,7 +73,7 @@
 ## Database Structure
 
 1. Create migrations:
-   ```powershell
+   ```bash
    php artisan make:migration create_products_table
    php artisan make:migration create_cart_items_table
    php artisan make:migration create_orders_table
@@ -100,14 +108,14 @@
    ```
 
 3. Run migrations:
-   ```powershell
+   ```bash
    php artisan migrate
    ```
 
 ## Basic Models
 
 1. Create models:
-   ```powershell
+   ```bash
    php artisan make:model Product
    php artisan make:model CartItem
    php artisan make:model Order
@@ -136,55 +144,64 @@ app/
 ## Development Server
 
 Start the development server:
-```powershell
+```bash
 php artisan serve
 ```
 
-## Windows-Specific Configuration
+## Apple Silicon-Specific Configuration
 
-1. Configure PHP in Windows:
-   ```powershell
-   # Create/modify php.ini file in C:\php
-   # Set post_max_size = 64M
-   # Set upload_max_filesize = 64M
-   # Set memory_limit = 512M
-   ```
-
-2. Configure Windows Firewall (if needed):
-   ```powershell
-   # Allow PHP and PostgreSQL through Windows Firewall
-   # Default ports:
-   # - Laravel development server: 8000
-   # - PostgreSQL: 5432
-   ```
-
-3. Configure PostgreSQL for Windows:
-   ```
-   # Edit postgresql.conf:
-   listen_addresses = '*'
+1. PHP Configuration:
+   ```bash
+   # Edit PHP configuration
+   php --ini  # Find your php.ini location
    
-   # Edit pg_hba.conf:
-   host    all    all    127.0.0.1/32    md5
+   # Recommended settings for M1/M2 Macs:
+   memory_limit = 512M
+   max_execution_time = 120
+   upload_max_filesize = 64M
+   post_max_size = 64M
    ```
 
-## Troubleshooting Windows-Specific Issues
-
-1. If composer shows SSL errors:
-   ```powershell
-   composer config -g -- disable-tls true
-   composer config -g -- secure-http false
+2. PostgreSQL Configuration:
+   ```bash
+   # Edit postgresql.conf (location may vary based on installation):
+   # /opt/homebrew/var/postgresql@14/postgresql.conf
+   
+   # Optimize for M1/M2 performance:
+   shared_buffers = 512MB
+   effective_cache_size = 1536MB
+   maintenance_work_mem = 128MB
    ```
 
-2. If artisan commands fail:
-   ```powershell
-   # Check PHP path
-   where php
+## Performance Optimization for Apple Silicon
+
+1. Configure Laravel for M1/M2:
+   ```php
+   // config/cache.php
+   'default' => env('CACHE_DRIVER', 'redis'),
    
-   # Check PHP version
-   php -v
-   
-   # Verify PHP extensions
-   php -m
+   // Install Redis for better performance
+   brew install redis
+   brew services start redis
+   composer require predis/predis
+   ```
+
+2. Configure Vite for faster asset compilation:
+   ```javascript
+   // vite.config.js
+   export default defineConfig({
+       plugins: [
+           laravel({
+               input: ['resources/css/app.css', 'resources/js/app.js'],
+               refresh: true,
+           }),
+       ],
+       server: {
+           hmr: {
+               host: 'localhost',
+           },
+       },
+   });
    ```
 
 ## Additional Security Steps
@@ -203,7 +220,26 @@ php artisan serve
    ```
 
 2. Configure session and authentication:
-   ```powershell
+   ```bash
    php artisan make:auth
    php artisan migrate
+   ```
+
+## Troubleshooting Apple Silicon Issues
+
+1. If Composer shows memory errors:
+   ```bash
+   export COMPOSER_MEMORY_LIMIT=-1
+   ```
+
+2. If PostgreSQL fails to start:
+   ```bash
+   brew services restart postgresql@14
+   ```
+
+3. Check architecture-specific binaries:
+   ```bash
+   # Verify running native ARM64 versions
+   arch           # Should output 'arm64'
+   which php     # Should point to /opt/homebrew/bin/php
    ```
